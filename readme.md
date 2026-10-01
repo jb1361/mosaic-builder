@@ -1,0 +1,1 @@
+python mosaic_builder.py --base anthony-dead.png --tiles ./cropped_images_v2 --out ./mosaic_out --grid-width 50 --tile-width 500 --chunk-w 5 --chunk-h 5 --color-match --stitch-out mosaic_out/full_mosaic.png

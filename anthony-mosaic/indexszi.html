@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Anthony Mosaic</title>
+	<style>
+		:root {
+			--bg: #0b0b0d;
+			--fg: #e8e8ea;
+			--muted: #9a9aa2;
+			--panel: rgba(11, 11, 13, 0.72);
+		}
+		html, body {
+			margin: 0;
+			height: 100%;
+			background: var(--bg);
+			color: var(--fg);
+			font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+			overflow: hidden;
+		}
+		#viewer {
+			position: fixed;
+			inset: 0;
+		}
+		.overlay {
+			position: fixed;
+			left: 16px;
+			bottom: 16px;
+			max-width: calc(100% - 32px);
+			padding: 10px 14px;
+			border-radius: 8px;
+			background: var(--panel);
+			backdrop-filter: blur(6px);
+			pointer-events: none;
+			z-index: 10;
+		}
+		.overlay h1 {
+			margin: 0 0 2px;
+			font-size: 16px;
+			font-weight: 600;
+		}
+		.overlay p {
+			margin: 0;
+			font-size: 13px;
+			color: var(--muted);
+		}
+		#status {
+			position: fixed;
+			inset: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 14px;
+			color: var(--muted);
+			pointer-events: none;
+			z-index: 5;
+		}
+	</style>
+</head>
+<body>
+	<div id="viewer"></div>
+	<div id="status">Loading mosaic…</div>
+	<div class="overlay">
+		<h1>Anthony Mosaic</h1>
+		<p>Scroll or pinch to zoom · drag to pan</p>
+	</div>
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/5.0.1/openseadragon.min.js"></script>
+	<!-- szi-tile-source (UMD build) registers OpenSeadragon.SziTileSource; tiles are read
+	     out of the single .szi zip with HTTP Range requests -->
+	<script src="/js/szi-tile-source.umd.js"></script>
+	<script>
+		const status = document.getElementById("status");
+
+		OpenSeadragon.SziTileSource.createSziTileSource("/tiles/mosaic.szi")
+			.then((tileSource) => {
+				const viewer = OpenSeadragon({
+					id: "viewer",
+					prefixUrl: "https://cdnjs.cloudflare.com/ajax/libs/openseadragon/5.0.1/images/",
+					tileSources: [tileSource],
+					showNavigator: true,
+					navigatorPosition: "TOP_RIGHT",
+					visibilityRatio: 1,
+					constrainDuringPan: true,
+					minZoomImageRatio: 0.9,
+					maxZoomPixelRatio: 2,
+					animationTime: 0.8,
+					springStiffness: 8,
+					immediateRender: false,
+					gestureSettingsMouse: { clickToZoom: true, dblClickToZoom: true },
+					gestureSettingsTouch: { pinchRotate: false }
+				});
+
+				viewer.addOnceHandler("open", () => status.remove());
+				viewer.addHandler("open-failed", (e) => {
+					status.textContent = "Couldn't load the mosaic: " + (e.message || "unknown error");
+				});
+			})
+			.catch((err) => {
+				status.textContent = "Couldn't load the mosaic: " + err.message;
+			});
+	</script>
+</body>
+</html>
