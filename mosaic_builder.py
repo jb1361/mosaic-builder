@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 try: 	
-	import os, sys, math, argparse, random, json
+	import os, sys, math, argparse, random, json, time
 	from PIL import Image
 	import numpy as np
 except Exception as e:
@@ -34,6 +34,21 @@ def parse_args():
 def load_or_fail(path: str):
 	if not path:
 		print("Missing required path.", file=sys.stderr); sys.exit(1)
+
+def save_image(img: Image.Image, path: str, retries: int = 10, **kwargs):
+	# On Windows, overwriting a file that another process has memory-mapped (e.g. Explorer's
+	# thumbnail generator, "COM Surrogate") fails with OSError 22/13. Retry, since those
+	# locks are usually brief, then fail with a useful message.
+	for attempt in range(retries):
+		try:
+			img.save(path, **kwargs)
+			return
+		except OSError as e:
+			if e.errno not in (13, 22) or attempt == retries - 1:
+				raise OSError(e.errno, f"Could not write {path}. Another program may have it open "
+					"(close any Explorer window/image viewer showing the output folder, or delete "
+					"the old output files first)") from e
+			time.sleep(0.5 * (attempt + 1))
 
 def gen_chunks(args):
 	random.seed(args.seed)
@@ -129,7 +144,7 @@ def gen_chunks(args):
 					chunk_img.paste(tile_canvas, (x * tile_w, y * tile_h))
 			out_name = f"chunk_r{cy}_c{cx}.png"
 			out_path = os.path.join(args.out, out_name)
-			chunk_img.save(out_path, optimize=True)
+			save_image(chunk_img, out_path, optimize=True)
 			manifest["chunks"].append(out_name)
 			print(f"Wrote {out_path}")
 
@@ -170,7 +185,7 @@ def stitch_from_manifest(manifest_path: str, stitch_out: str):
 			canvas.paste(im, (x_px, y_px))
 
 	os.makedirs(os.path.dirname(stitch_out) or ".", exist_ok=True)
-	canvas.save(stitch_out, optimize=True)
+	save_image(canvas, stitch_out, optimize=True)
 	print(f"Stitched mosaic saved to {stitch_out}")
 
 def main():
